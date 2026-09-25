@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>🔥 FIREWATCH: SIMULASI PEMADAMAN HUTAN 🚒</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        html, body {
+            width: 100vw;
+            height: 100dvh;
+            overflow: hidden;
+            background-color: #0d1a0d;
+            color: #ffffff;
+            touch-action: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* HUD Overlay */
+        #hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        .hud-card {
+            background: rgba(15, 23, 15, 0.9);
+            border: 2px solid #22c55e;
+            border-radius: 14px;
+            padding: 6px 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: bold;
+            font-size: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+        }
+
+        .hud-card span {
+            color: #fbbf24;
+        }
+
+        #reset-btn {
+            pointer-events: auto;
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        /* Mission Banner */
+        #mission-banner {
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(30, 41, 59, 0.95);
+            border: 2px solid #38bdf8;
+            color: #f8fafc;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 9;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            pointer-events: none;
+            text-align: center;
+            max-width: 90%;
+        }
+
+        /* Touch Controls */
+        #controls-overlay {
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            right: 12px;
+            height: 150px;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            pointer-events: none;
+        }
+
+        #joystick-wrapper {
+            position: relative;
+            width: 130px;
+            height: 130px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            pointer-events: auto;
+            touch-action: none;
+            backdrop-filter: blur(2px);
+        }
+
+        #joystick-stick {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 50px;
+            height: 50px;
+            margin-top: -25px;
+            margin-left: -25px;
+            background: radial-gradient(circle, #ef4444 0%, #b91c1c 100%);
+            border: 2px solid #fca5a5;
+            border-radius: 50%;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            pointer-events: none;
+        }
+
+        #action-btn {
+            pointer-events: auto;
+            width: 85px;
+            height: 85px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #0284c7, #0369a1);
+            border: 3px solid #38bdf8;
+            color: white;
+            font-weight: 900;
+            font-size: 13px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.5);
+            touch-action: none;
+            cursor: pointer;
+        }
+
+        #action-btn:active {
+            transform: scale(0.92);
+        }
+
+        /* Modals & Panels */
+        .modal {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 20, 10, 0.92);
+            z-index: 100;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 12px;
+            backdrop-filter: blur(6px);
+            overflow-y: auto;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .panel {
+            background: #1e293b;
+            border: 2px solid #3b82f6;
+            border-radius: 18px;
+            width: 100%;
+            max-width: 440px;
+            padding: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.7);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 94vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .logbook-sticky {
+            background: #0f172a;
+            border: 2px solid #f59e0b;
+            border-radius: 12px;
+            padding: 10px;
+            font-size: 12px;
+            color: #f1f5f9;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+        }
+
+        .logbook-sticky h4 {
+            color: #fbbf24;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 4px;
+            font-size: 13px;
+        }
+
+        .logbook-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            text-align: center;
+        }
+
+        .logbook-item {
+            background: #1e293b;
+            padding: 6px;
+            border-radius: 6px;
+            border: 1px solid #334155;
+        }
+
+        .panel-header {
+            text-align: center;
+            border-bottom: 2px solid #334155;
+            padding-bottom: 8px;
+        }
+
+        .panel-header h2 {
+            color: #f3f4f6;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            touch-action: manipulation;
+        }
+
+        .btn-primary { background: linear-gradient(135deg, #22c55e, #16a34a); border: 1px solid #4ade80; }
+        .btn-secondary { background: linear-gradient(135deg, #3b82f6, #1d4ed8); border: 1px solid #60a5fa; }
+        .btn-warning { background: linear-gradient(135deg, #f59e0b, #d97706); border: 1px solid #fbbf24; }
+        .btn-danger { background: linear-gradient(135deg, #ef4444, #dc2626); border: 1px solid #fca5a5; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Keypad */
+        .keypad-display {
+            background: #0f172a;
+            border: 2px solid #334155;
+            border-radius: 10px;
+            padding: 8px;
+            text-align: right;
+            font-size: 22px;
+            font-family: monospace;
+            color: #38bdf8;
+            font-weight: bold;
+            min-height: 44px;
+        }
+
+        .keypad-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+        }
+
+        .keypad-btn {
+            background: #334155;
+            border: none;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+        }
+
+        /* Interactive Bar Chart */
+        .chart-area {
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-end;
+            height: 160px;
+            border-bottom: 2px solid #64748b;
+            border-left: 2px solid #64748b;
+            padding-bottom: 2px;
+            background: #0f172a;
+            border-radius: 8px;
+            padding-top: 10px;
+        }
+
+        .chart-bar-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100%;
+            justify-content: flex-end;
+            width: 50px;
+        }
+
+        .chart-bar {
+            width: 36px;
+            background: linear-gradient(to top, #ef4444, #f97316);
+            border-radius: 4px 4px 0 0;
+            min-height: 4px;
+            touch-action: none;
+        }
+
+        .chart-val { font-size: 11px; font-weight: bold; color: #fbbf24; margin-bottom: 2px; }
+        .chart-label { margin-top: 4px; font-weight: bold; font-size: 12px; color: #94a3b8; }
+
+        /* Custom Checkbox Strategy */
+        .water-check-card {
+            background: #0f172a;
+            border: 2px solid #334155;
+            border-radius: 10px;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            cursor: pointer;
+        }
+
+        .water-check-card.selected {
+            border-color: #38bdf8;
+            background: #1e293b;
+        }
+
+        .water-check-card input {
+            width: 20px;
+            height: 20px;
+            accent-color: #38bdf8;
+        }
+
+        #water-warn-box {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid #ef4444;
+            color: #fca5a5;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            display: none;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .quiz-opt {
+            background: #334155;
+            border: 2px solid #475569;
+            border-radius: 8px;
+            padding: 10px;
+            font-weight: bold;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .quiz-opt.selected { border-color: #38bdf8; background: #0f172a; }
+
+        #toast {
+            position: absolute;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.95);
+            border: 2px solid #f59e0b;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 12px;
+            z-index: 200;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            text-align: center;
+            width: 85%;
+            max-width: 320px;
+        }
+
+        #toast.show { opacity: 1; }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <!-- Canvas Layer -->
+        <div id="canvas-container">
+            <canvas id="gameCanvas"></canvas>
+        </div>
+
+        <!-- HUD -->
+        <div id="hud">
+            <div class="hud-card">🔥 <span>FIREWATCH</span></div>
+            <div class="hud-card">📋 DATA: <span id="data-count-val">0/3</span></div>
+            <div class="hud-card">💧 AIR: <span id="water-tank-val">5.000L</span></div>
+            <button id="reset-btn">RESET</button>
+        </div>
+
+        <!-- Mission Banner -->
+        <div id="mission-banner">
+            📍 MISI: Kumpulkan data di Titik A, B, dan C!
+        </div>
+
+        <!-- Touch Controls -->
+        <div id="controls-overlay">
+            <div id="joystick-wrapper">
+                <div id="joystick-stick"></div>
+            </div>
+            <div id="action-btn">
+                <span>🔍</span>
+                <span>AKSI</span>
+            </div>
+        </div>
+
+        <!-- Toast Notification -->
+        <div id="toast">Message</div>
+
+        <!-- MODAL 1: DISCOVERY OF FIRE DATA -->
+        <div id="modal-discovery" class="modal">
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>🔥 OBSERVASI TITIK API</h2>
+                </div>
+                <div id="discovery-content" style="text-align: center; font-size: 14px; line-height: 1.6;">
+                    <!-- Filled by JS -->
+                </div>
+                <button id="btn-collect-data" class="btn btn-warning">📋 CATAT DATA KE LOGBOOK</button>
+            </div>
+        </div>
+
+        <!-- MODAL 2: DATA CENTER & MATH PROCESSING -->
+        <div id="modal-datacenter" class="modal">
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>📊 RESCUE DATA CENTER</h2>
+                    <p style="font-size: 11px; color: #94a3b8;">Pengolahan Data & Perencanaan Pemadaman</p>
+                </div>
+
+                <!-- FIXED LOGBOOK PANEL -->
+                <div class="logbook-sticky">
+                    <h4>📋 CATATAN DATA TERUKUR (LOGBOOK)</h4>
+                    <div class="logbook-grid">
+                        <div class="logbook-item">
+                            <b>TITIK A</b><br>🔥 20 ha<br>💧 2.000L
+                        </div>
+                        <div class="logbook-item">
+                            <b>TITIK B</b><br>🔥 35 ha<br>💧 3.000L
+                        </div>
+                        <div class="logbook-item">
+                            <b>TITIK C</b><br>🔥 15 ha<br>💧 1.500L
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 1: Comparison -->
+                <div id="dc-step-1" class="dc-step">
+                    <p style="font-size: 13px; font-weight: bold; text-align: center;">1. Urutkan titik kebakaran dari area TERKECIL ke TERBESAR!</p>
+                    <div id="drag-container" style="display: flex; flex-direction: column; gap: 6px; margin: 8px 0;"></div>
+                    <button id="btn-submit-step1" class="btn btn-secondary">✅ PERIKSA URUTAN</button>
+                </div>
+
+                <!-- Step 2: Total Area -->
+                <div id="dc-step-2" class="dc-step" style="display: none;">
+                    <p style="font-size: 13px; font-weight: bold; text-align: center;">2. Hitung TOTAL Luas Area Terbakar (ha):</p>
+                    <div class="keypad-display" id="keypad-input">_</div>
+                    <div class="keypad-grid" style="margin-top: 6px;">
+                        <button class="keypad-btn" onclick="app.pressKey('1')">1</button>
+                        <button class="keypad-btn" onclick="app.pressKey('2')">2</button>
+                        <button class="keypad-btn" onclick="app.pressKey('3')">3</button>
+                        <button class="keypad-btn" onclick="app.pressKey('4')">4</button>
+                        <button class="keypad-btn" onclick="app.pressKey('5')">5</button>
+                        <button class="keypad-btn" onclick="app.pressKey('6')">6</button>
+                        <button class="keypad-btn" onclick="app.pressKey('7')">7</button>
+                        <button class="keypad-btn" onclick="app.pressKey('8')">8</button>
+                        <button class="keypad-btn" onclick="app.pressKey('9')">9</button>
+                        <button class="keypad-btn" style="background: #ef4444;" onclick="app.pressKey('clear')">C</button>
+                        <button class="keypad-btn" onclick="app.pressKey('0')">0</button>
+                        <button class="keypad-btn" style="background: #f59e0b;" onclick="app.pressKey('back')">⌫</button>
+                    </div>
+                    <button id="btn-submit-step2" class="btn btn-secondary" style="margin-top: 8px;">✅ PERIKSA TOTAL</button>
+                </div>
+
+                <!-- Step 3: Bar Chart Builder -->
+                <div id="dc-step-3" class="dc-step" style="display: none;">
+                    <p style="font-size: 12px; text-align: center; font-weight: bold;">3. Buat Diagram Batang! Geser puncak batang sesuai Luas Area (A=20, B=35, C=15):</p>
+                    <div class="chart-area" style="margin: 8px 0;">
+                        <div class="chart-bar-wrap">
+                            <div class="chart-val" id="val-A">0 ha</div>
+                            <div class="chart-bar" id="bar-A"></div>
+                            <div class="chart-label">A</div>
+                        </div>
+                        <div class="chart-bar-wrap">
+                            <div class="chart-val" id="val-B">0 ha</div>
+                            <div class="chart-bar" id="bar-B"></div>
+                            <div class="chart-label">B</div>
+                        </div>
+                        <div class="chart-bar-wrap">
+                            <div class="chart-val" id="val-C">0 ha</div>
+                            <div class="chart-bar" id="bar-C"></div>
+                            <div class="chart-label">C</div>
+                        </div>
+                    </div>
+                    <button id="btn-submit-step3" class="btn btn-secondary">✅ PERIKSA DIAGRAM</button>
+                </div>
+
+                <!-- Step 4: Custom Water Strategy Selection -->
+                <div id="dc-step-4" class="dc-step" style="display: none;">
+                    <p style="font-size: 12px; text-align: center; font-weight: bold;">
+                        4. Stok Air Utamamu: <span style="color: #38bdf8;">💧 5.000 Liter</span>.<br>
+                        Pilih titik api mana saja yang mau dipadamkan dulu!
+                    </p>
+
+                    <div style="margin: 10px 0;">
+                        <label class="water-check-card" id="card-chk-A">
+                            <div>
+                                <b>🔥 TITIK A</b> <span style="font-size: 11px; color: #94a3b8;">(Luas 20 ha)</span><br>
+                                <span style="color: #38bdf8; font-size: 12px;">💧 Kebutuhan Air: 2.000 Liter</span>
+                            </div>
+                            <input type="checkbox" id="chk-A" onchange="app.updateWaterSelection()">
+                        </label>
+
+                        <label class="water-check-card" id="card-chk-B">
+                            <div>
+                                <b>🔥 TITIK B</b> <span style="font-size: 11px; color: #94a3b8;">(Luas 35 ha)</span><br>
+                                <span style="color: #38bdf8; font-size: 12px;">💧 Kebutuhan Air: 3.000 Liter</span>
+                            </div>
+                            <input type="checkbox" id="chk-B" onchange="app.updateWaterSelection()">
+                        </label>
+
+                        <label class="water-check-card" id="card-chk-C">
+                            <div>
+                                <b>🔥 TITIK C</b> <span style="font-size: 11px; color: #94a3b8;">(Luas 15 ha)</span><br>
+                                <span style="color: #38bdf8; font-size: 12px;">💧 Kebutuhan Air: 1.500 Liter</span>
+                            </div>
+                            <input type="checkbox" id="chk-C" onchange="app.updateWaterSelection()">
+                        </label>
+                    </div>
+
+                    <div style="background: #0f172a; padding: 10px; border-radius: 8px; font-size: 12px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+                        <span>Total Kebutuhan Air:</span>
+                        <span id="selected-water-total" style="color: #fbbf24; font-size: 14px;">0 Liter</span>
+                    </div>
+
+                    <div id="water-warn-box" style="margin-top: 6px;">
+                        ⚠️ Kebutuhan air melebihi stok (5.000L)! Kurangi pilihan titik api!
+                    </div>
+
+                    <button id="btn-start-field-mission" class="btn btn-primary" style="margin-top: 10px;" disabled>
+                        🚒 MULAI JALAN PEMADAMAN
+                    </button>
+                </div>
+
+                <button id="btn-close-dc" class="btn btn-danger" style="margin-top: 4px;">TUTUP BASE</button>
+            </div>
+        </div>
+
+        <!-- MODAL 3: BONUS QUIZ FOR WATER TANK AT REMAINING FIRE POINT -->
+        <div id="modal-bonus-quiz" class="modal">
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>🚨 AIR UTAMA HABIS! 🚨</h2>
+                    <p style="color: #ef4444; font-weight: bold;" id="quiz-title-target">Misi Air Cadangan</p>
+                </div>
+                <div style="font-size: 13px; text-align: center; line-height: 1.5;">
+                    <p>Stok air tangki utama sudah habis terpakai di titik lokasi sebelumnya.</p>
+                    <p style="margin-top: 6px; color: #fbbf24; font-weight: bold;">Jawab soal persentase ini untuk mengisi kembali tangki air cadangan!</p>
+                </div>
+                <div style="background: #0f172a; padding: 12px; border-radius: 10px; margin: 8px 0;">
+                    <p style="font-size: 13px; font-weight: bold;" id="bonus-quiz-q">Berapakah persentase luas titik api ini terhadap Total Luas Hutan (70 ha)?</p>
+                    <div id="bonus-quiz-opts" style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
+                        <!-- Generated in JS -->
+                    </div>
+                </div>
+                <button id="btn-submit-bonus" class="btn btn-warning">💧 ISI TANGKI CADANGAN & SEMPROT</button>
+            </div>
+        </div>
+
+        <!-- MODAL 4: FINAL VICTORY SCREEN -->
+        <div id="modal-final" class="modal">
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>🎉 MISI PEMADAMAN SUKSES! 🚒</h2>
+                    <p style="color: #4ade80;">Semua Api di Hutan Padam Total!</p>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px;">
+                    <div style="text-align: center; background: #0f172a; padding: 10px; border-radius: 10px;">
+                        <span style="color: #94a3b8;">SKOR AKHIR MATEMATIKA</span>
+                        <div style="font-size: 30px; font-weight: 900; color: #fbbf24;" id="final-score">100 / 100</div>
+                    </div>
+                    <div style="background: #0f172a; padding: 10px; border-radius: 8px;">
+                        <b>📊 RINGKASAN DATA PEMBELAJARAN:</b>
+                        <div>• Total Luas Hutan Terbakar: <b>70 ha</b></div>
+                        <div>• Urutan Luas: C (15ha) &lt; A (20ha) &lt; B (35ha)</div>
+                        <div>• Titik Pilihan Utama Awal: <b id="summary-strategy">A & B</b></div>
+                        <div>• Misi Air Cadangan: <b id="summary-quiz">Berhasil Selesai!</b></div>
+                    </div>
+                </div>
+                <button id="btn-restart-final" class="btn btn-primary">🔄 MAIN LAGI</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // GAME STATE & SYSTEM
+        const app = {
+            firePointsData: {
+                A: { name: 'TITIK A', area: 20, dist: 2, x: 350, y: 300, found: false, extinguished: false, waterReq: 2000, pct: "28.57%" },
+                B: { name: 'TITIK B', area: 35, dist: 5, x: 1250, y: 350, found: false, extinguished: false, waterReq: 3000, pct: "50.00%" },
+                C: { name: 'TITIK C', area: 15, dist: 3, x: 800, y: 1150, found: false, extinguished: false, waterReq: 1500, pct: "21.43%" }
+            },
+            fireStation: { x: 200, y: 700, radius: 90 },
+            score: 0,
+            waterTank: 5000,
+            keypadVal: "",
+            chartValues: { A: 0, B: 0, C: 0 },
+            selectedTargets: [],
+            currentQuizTargetKey: null,
+            selectedBonusAns: null,
+            fieldMissionActive: false,
+
+            init() {
+                this.initCanvas();
+                this.initControls();
+                this.initDOM();
+                this.updateHUD();
+                requestAnimationFrame((t) => this.loop(t));
+            },
+
+            showToast(msg) {
+                const toast = document.getElementById('toast');
+                toast.innerText = msg;
+                toast.classList.add('show');
+                setTimeout(() => toast.classList.remove('show'), 2800);
+            },
+
+            updateHUD() {
+                let count = 0;
+                if (this.firePointsData.A.found) count++;
+                if (this.firePointsData.B.found) count++;
+                if (this.firePointsData.C.found) count++;
+                
+                document.getElementById('data-count-val').innerText = `${count}/3`;
+                document.getElementById('water-tank-val').innerText = `${this.waterTank.toLocaleString()}L`;
+
+                const banner = document.getElementById('mission-banner');
+                if (!this.fieldMissionActive) {
+                    banner.innerText = "📍 MISI: Jalan ke Titik A, B, & C untuk mengumpulkan data!";
+                } else {
+                    const remaining = Object.keys(this.firePointsData).filter(k => !this.firePointsData[k].extinguished);
+                    if (remaining.length > 0) {
+                        const targetText = this.selectedTargets.length > 0 ? this.selectedTargets.join(' & ') : 'Sisa Titik';
+                        banner.innerText = `🚒 PEMADAMAN: Jalan & semprot air di titik lokasi api! (${remaining.length} tersisa)`;
+                    } else {
+                        banner.innerText = "🎉 SEMUA API TELAH PADAM TOTAL!";
+                    }
+                }
+            },
+
+            // CANVAS & GRAPHICS ENGINE
+            canvas: null,
+            ctx: null,
+            camera: { x: 0, y: 0 },
+            mapSize: { width: 1600, height: 1400 },
+            player: { x: 200, y: 700, speed: 4.5, radius: 16, angle: 0 },
+            joystickVec: { x: 0, y: 0 },
+            waterParticles: [],
+
+            initCanvas() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
+            },
+
+            resizeCanvas() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            },
+
+            initControls() {
+                const wrapper = document.getElementById('joystick-wrapper');
+                const stick = document.getElementById('joystick-stick');
+                let touchId = null;
+                let center = { x: 0, y: 0 };
+
+                const handleStart = (e) => {
+                    e.preventDefault();
+                    const touch = e.changedTouches ? e.changedTouches[0] : e;
+                    touchId = touch.identifier !== undefined ? touch.identifier : 'mouse';
+                    const rect = wrapper.getBoundingClientRect();
+                    center = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+                    handleMove(e);
+                };
+
+                const handleMove = (e) => {
+                    if (touchId === null) return;
+                    let touch = null;
+                    if (e.changedTouches) {
+                        for (let t of e.changedTouches) {
+                            if (t.identifier === touchId) { touch = t; break; }
+                        }
+                    } else touch = e;
+                    if (!touch) return;
+
+                    const dx = touch.clientX - center.x;
+                    const dy = touch.clientY - center.y;
+                    const dist = Math.hypot(dx, dy);
+                    const maxDist = 42;
+                    const angle = Math.atan2(dy, dx);
+
+                    const moveDist = Math.min(dist, maxDist);
+                    const stickX = Math.cos(angle) * moveDist;
+                    const stickY = Math.sin(angle) * moveDist;
+
+                    stick.style.transform = `translate(${stickX}px, ${stickY}px)`;
+                    this.joystickVec = { x: stickX / maxDist, y: stickY / maxDist };
+                };
+
+                const handleEnd = () => {
+                    if (touchId === null) return;
+                    stick.style.transform = `translate(0px, 0px)`;
+                    this.joystickVec = { x: 0, y: 0 };
+                    touchId = null;
+                };
+
+                wrapper.addEventListener('touchstart', handleStart, { passive: false });
+                wrapper.addEventListener('touchmove', handleMove, { passive: false });
+                wrapper.addEventListener('touchend', handleEnd, { passive: false });
+                wrapper.addEventListener('mousedown', handleStart);
+                window.addEventListener('mousemove', handleMove);
+                window.addEventListener('mouseup', handleEnd);
+
+                const actionBtn = document.getElementById('action-btn');
+                const triggerAction = (e) => {
+                    e.preventDefault();
+                    this.handleActionTrigger();
+                };
+                actionBtn.addEventListener('touchstart', triggerAction, { passive: false });
+                actionBtn.addEventListener('click', triggerAction);
+
+                document.getElementById('reset-btn').onclick = () => {
+                    if (confirm("Reset ulang permainan?")) location.reload();
+                };
+            },
+
+            handleActionTrigger() {
+                // Check distance to Fire Points
+                for (let key in this.firePointsData) {
+                    const fp = this.firePointsData[key];
+                    const dist = Math.hypot(this.player.x - fp.x, this.player.y - fp.y);
+                    if (dist < 70) {
+                        if (!this.fieldMissionActive) {
+                            // Stage 1: Collect Data
+                            this.openDiscoveryModal(key);
+                            return;
+                        } else {
+                            // Stage 2: Extinguish Mission
+                            this.extinguishFireAt(key);
+                            return;
+                        }
+                    }
+                }
+
+                // Check distance to Base Station
+                const distBase = Math.hypot(this.player.x - this.fireStation.x, this.player.y - this.fireStation.y);
+                if (distBase < this.fireStation.radius + 20) {
+                    this.openDataCenterModal();
+                    return;
+                }
+
+                this.showToast("Dekati titik lokasi di peta lalu tekan tombol AKSI!");
+            },
+
+            extinguishFireAt(key) {
+                const fp = this.firePointsData[key];
+                if (fp.extinguished) {
+                    this.showToast(`✅ Api di ${fp.name} sudah padam sepenuhnya!`);
+                    return;
+                }
+
+                // Check if player has enough water in current tank
+                if (this.waterTank < fp.waterReq) {
+                    // Open Bonus Quiz Modal to refill water
+                    this.openBonusQuizModal(key);
+                    return;
+                }
+
+                // Spawn Water Spray Particles
+                this.spawnWaterParticles(this.player.x, this.player.y, fp.x, fp.y);
+
+                this.waterTank -= fp.waterReq;
+                fp.extinguished = true;
+                this.updateHUD();
+
+                this.showToast(`💧 ${fp.name} BERHASIL DIPADAMKAN! Sisa Tangki: ${this.waterTank}L.`);
+
+                // Check Victory
+                const remaining = Object.keys(this.firePointsData).filter(k => !this.firePointsData[k].extinguished);
+                if (remaining.length === 0) {
+                    setTimeout(() => {
+                        document.getElementById('final-score').innerText = `${this.score} / 100`;
+                        document.getElementById('summary-strategy').innerText = `${this.selectedTargets.join(', ')}`;
+                        document.getElementById('modal-final').classList.add('active');
+                    }, 1800);
+                }
+            },
+
+            spawnWaterParticles(px, py, fx, fy) {
+                for (let i = 0; i < 25; i++) {
+                    this.waterParticles.push({
+                        x: px, y: py,
+                        vx: (fx - px) * 0.05 + (Math.random() - 0.5) * 3,
+                        vy: (fy - py) * 0.05 + (Math.random() - 0.5) * 3,
+                        life: 30
+                    });
+                }
+            },
+
+            loop(timestamp) {
+                this.update();
+                this.render();
+                requestAnimationFrame((t) => this.loop(t));
+            },
+
+            update() {
+                if (this.joystickVec.x !== 0 || this.joystickVec.y !== 0) {
+                    this.player.x += this.joystickVec.x * this.player.speed;
+                    this.player.y += this.joystickVec.y * this.player.speed;
+                    this.player.angle = Math.atan2(this.joystickVec.y, this.joystickVec.x);
+
+                    this.player.x = Math.max(20, Math.min(this.mapSize.width - 20, this.player.x));
+                    this.player.y = Math.max(20, Math.min(this.mapSize.height - 20, this.player.y));
+                }
+
+                this.camera.x = this.player.x - this.canvas.width / 2;
+                this.camera.y = this.player.y - this.canvas.height / 2;
+                this.camera.x = Math.max(0, Math.min(this.mapSize.width - this.canvas.width, this.camera.x));
+                this.camera.y = Math.max(0, Math.min(this.mapSize.height - this.canvas.height, this.camera.y));
+
+                // Water particles update
+                for (let i = this.waterParticles.length - 1; i >= 0; i--) {
+                    let p = this.waterParticles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.life--;
+                    if (p.life <= 0) this.waterParticles.splice(i, 1);
+                }
+            },
+
+            render() {
+                const ctx = this.ctx;
+                ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                ctx.save();
+                ctx.translate(-this.camera.x, -this.camera.y);
+
+                // MAP GROUND
+                ctx.fillStyle = '#142814';
+                ctx.fillRect(0, 0, this.mapSize.width, this.mapSize.height);
+
+                // Dirt Path Trails
+                ctx.strokeStyle = '#3f2e18';
+                ctx.lineWidth = 40;
+                ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+                ctx.beginPath();
+                ctx.moveTo(this.fireStation.x, this.fireStation.y);
+                ctx.lineTo(this.firePointsData.A.x, this.firePointsData.A.y);
+                ctx.lineTo(this.firePointsData.B.x, this.firePointsData.B.y);
+                ctx.lineTo(this.firePointsData.C.x, this.firePointsData.C.y);
+                ctx.stroke();
+
+                // Forest Grass Details
+                ctx.fillStyle = '#1e3a1e';
+                for (let x = 0; x < this.mapSize.width; x += 120) {
+                    for (let y = 0; y < this.mapSize.height; y += 120) {
+                        ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI * 2); ctx.fill();
+                    }
+                }
+
+                // Trees
+                const treePositions = [
+                    [100,100],[450,150],[650,200],[1050,100],[1450,200],[150,450],
+                    [550,550],[950,450],[1350,500],[450,900],[1050,900],[1450,1000],
+                    [200,1250],[650,1320],[1250,1320]
+                ];
+                for (let pos of treePositions) {
+                    ctx.fillStyle = '#0f3818';
+                    ctx.beginPath(); ctx.arc(pos[0], pos[1], 32, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#165222';
+                    ctx.beginPath(); ctx.arc(pos[0] - 6, pos[1] - 6, 22, 0, Math.PI * 2); ctx.fill();
+                }
+
+                // Base Station Area
+                const fs = this.fireStation;
+                ctx.fillStyle = 'rgba(59, 130, 246, 0.25)';
+                ctx.beginPath(); ctx.arc(fs.x, fs.y, fs.radius, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 3; ctx.stroke();
+
+                ctx.fillStyle = '#ffffff'; ctx.font = 'bold 36px sans-serif'; ctx.textAlign = 'center';
+                ctx.fillText('🏠', fs.x, fs.y + 10);
+                ctx.font = 'bold 12px sans-serif'; ctx.fillText('RESCUE BASE', fs.x, fs.y + 32);
+
+                // Fire Points Rendering
+                for (let k in this.firePointsData) {
+                    const fp = this.firePointsData[k];
+                    
+                    if (!fp.extinguished) {
+                        ctx.fillStyle = 'rgba(239, 68, 68, 0.35)';
+                        ctx.beginPath();
+                        ctx.arc(fp.x, fp.y, 35 + Math.sin(Date.now() / 150) * 6, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+
+                    ctx.font = 'bold 32px sans-serif'; ctx.textAlign = 'center';
+                    if (fp.extinguished) {
+                        ctx.fillText('🌲', fp.x, fp.y + 10);
+                    } else {
+                        ctx.fillText('🔥', fp.x, fp.y + 10);
+                    }
+
+                    ctx.font = 'bold 12px sans-serif';
+                    ctx.fillStyle = fp.extinguished ? '#4ade80' : (fp.found ? '#fbbf24' : '#ef4444');
+                    ctx.fillText(`${fp.name} ${fp.found ? '📋' : ''}`, fp.x, fp.y + 32);
+                }
+
+                // Render Water Spray Particles
+                ctx.fillStyle = '#38bdf8';
+                for (let p of this.waterParticles) {
+                    ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI * 2); ctx.fill();
+                }
+
+                // Render Player
+                ctx.save();
+                ctx.translate(this.player.x, this.player.y);
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath(); ctx.arc(0, 0, this.player.radius, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = '#fca5a5'; ctx.lineWidth = 2; ctx.stroke();
+
+                ctx.fillStyle = '#f59e0b';
+                ctx.beginPath();
+                ctx.arc(Math.cos(this.player.angle) * 10, Math.sin(this.player.angle) * 10, 7, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText('🧑‍🚒', 0, 0);
+                ctx.restore();
+
+                ctx.restore();
+            },
+
+            // DISCOVERY MODAL LOGIC
+            openDiscoveryModal(key) {
+                const fp = this.firePointsData[key];
+                const content = document.getElementById('discovery-content');
+                content.innerHTML = `
+                    <div style="font-size: 38px; margin-bottom: 6px;">🔥</div>
+                    <div style="font-size: 16px; font-weight: bold; color: #f97316;">${fp.name}</div>
+                    <div style="margin-top: 8px; background: #0f172a; padding: 10px; border-radius: 8px; border: 1px solid #334155;">
+                        <div>🔥 Luas Terbakar: <b>${fp.area} ha</b></div>
+                        <div>💧 Kebutuhan Air: <b>${fp.waterReq.toLocaleString()} Liter</b></div>
+                    </div>
+                `;
+
+                const btn = document.getElementById('btn-collect-data');
+                btn.onclick = () => {
+                    fp.found = true;
+                    this.score += 10;
+                    this.updateHUD();
+                    document.getElementById('modal-discovery').classList.remove('active');
+                    this.showToast(`✅ DATA ${key} DICATAT! Cari data titik lainnya atau ke Base Center.`);
+                };
+
+                document.getElementById('modal-discovery').classList.add('active');
+            },
+
+            // DATA CENTER MODAL LOGIC
+            openDataCenterModal() {
+                const allFound = this.firePointsData.A.found && this.firePointsData.B.found && this.firePointsData.C.found;
+                
+                if (!allFound) {
+                    this.showToast("⚠️ Kumpulkan DAHULU data dari Titik A, B, dan C di peta!");
+                    return;
+                }
+
+                this.showDCStep(1);
+                document.getElementById('modal-datacenter').classList.add('active');
+            },
+
+            showDCStep(stepIndex) {
+                const steps = document.querySelectorAll('.dc-step');
+                steps.forEach((el, idx) => el.style.display = (idx === (stepIndex - 1)) ? 'block' : 'none');
+
+                if (stepIndex === 1) this.initStep1Comparison();
+                if (stepIndex === 2) this.initStep2TotalArea();
+                if (stepIndex === 3) this.initStep3BarChart();
+                if (stepIndex === 4) this.updateWaterSelection();
+            },
+
+            // Dynamic Checkbox Water Selection Logic
+            updateWaterSelection() {
+                let totalWater = 0;
+                this.selectedTargets = [];
+
+                ['A', 'B', 'C'].forEach(key => {
+                    const chk = document.getElementById(`chk-${key}`);
+                    const card = document.getElementById(`card-chk-${key}`);
+                    
+                    if (chk.checked) {
+                        card.classList.add('selected');
+                        totalWater += this.firePointsData[key].waterReq;
+                        this.selectedTargets.push(key);
+                    } else {
+                        card.classList.remove('selected');
+                    }
+                });
+
+                document.getElementById('selected-water-total').innerText = `${totalWater.toLocaleString()} Liter`;
+
+                const warnBox = document.getElementById('water-warn-box');
+                const btnStart = document.getElementById('btn-start-field-mission');
+
+                if (totalWater > 5000) {
+                    warnBox.style.display = 'block';
+                    btnStart.disabled = true;
+                } else if (this.selectedTargets.length === 0) {
+                    warnBox.style.display = 'none';
+                    btnStart.disabled = true;
+                } else {
+                    warnBox.style.display = 'none';
+                    btnStart.disabled = false;
+                }
+            },
+
+            // Step 1: Comparison Order
+            step1Order: ['A', 'B', 'C'],
+            initStep1Comparison() {
+                this.step1Order = ['A', 'B', 'C'];
+                this.renderStep1Items();
+            },
+
+            renderStep1Items() {
+                const container = document.getElementById('drag-container');
+                container.innerHTML = '';
+                this.step1Order.forEach((key, idx) => {
+                    const fp = this.firePointsData[key];
+                    const item = document.createElement('div');
+                    item.style.cssText = "background: #334155; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 13px; display: flex; justify-content: space-between; align-items: center;";
+                    item.innerHTML = `<span>🔥 Titik ${key} (${fp.area} ha)</span> <span style="color:#fbbf24;">Tap tukar ↕️</span>`;
+                    item.onclick = () => {
+                        if (idx < this.step1Order.length - 1) {
+                            const temp = this.step1Order[idx];
+                            this.step1Order[idx] = this.step1Order[idx + 1];
+                            this.step1Order[idx + 1] = temp;
+                        } else {
+                            this.step1Order.unshift(this.step1Order.pop());
+                        }
+                        this.renderStep1Items();
+                    };
+                    container.appendChild(item);
+                });
+            },
+
+            pressKey(val) {
+                if (val === 'clear') this.keypadVal = "";
+                else if (val === 'back') this.keypadVal = this.keypadVal.slice(0, -1);
+                else if (this.keypadVal.length < 5) this.keypadVal += val;
+                
+                document.getElementById('keypad-input').innerText = this.keypadVal || "_";
+            },
+
+            initStep2TotalArea() {
+                this.keypadVal = "";
+                document.getElementById('keypad-input').innerText = "_";
+            },
+
+            initStep3BarChart() {
+                this.chartValues = { A: 5, B: 5, C: 5 };
+                ['A', 'B', 'C'].forEach(key => {
+                    const bar = document.getElementById(`bar-${key}`);
+                    const updateBarHeight = (e) => {
+                        const rect = bar.parentElement.getBoundingClientRect();
+                        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                        let h = rect.bottom - clientY;
+                        h = Math.max(8, Math.min(130, h));
+                        const val = Math.round((h / 130) * 40);
+                        this.chartValues[key] = val;
+                        bar.style.height = `${(val / 40) * 100}%`;
+                        document.getElementById(`val-${key}`).innerText = `${val} ha`;
+                    };
+
+                    bar.parentElement.ontouchmove = (e) => { e.preventDefault(); updateBarHeight(e); };
+                    bar.parentElement.onclick = updateBarHeight;
+                });
+            },
+
+            // BONUS QUIZ MODAL
+            openBonusQuizModal(key) {
+                this.currentQuizTargetKey = key;
+                const fp = this.firePointsData[key];
+
+                document.getElementById('quiz-title-target').innerText = `Kuis Tambahan di ${fp.name}`;
+                document.getElementById('bonus-quiz-q').innerText = `Berapakah persentase luas ${fp.name} (${fp.area} ha) terhadap Total Luas Hutan (70 ha)?`;
+
+                const container = document.getElementById('bonus-quiz-opts');
+                container.innerHTML = '';
+                this.selectedBonusAns = null;
+
+                const opts = ["28.57%", "50.00%", "21.43%", "35.00%"];
+                opts.forEach(opt => {
+                    const el = document.createElement('div');
+                    el.className = 'quiz-opt';
+                    el.innerText = opt;
+                    el.onclick = () => {
+                        document.querySelectorAll('#bonus-quiz-opts .quiz-opt').forEach(x => x.classList.remove('selected'));
+                        el.classList.add('selected');
+                        this.selectedBonusAns = opt;
+                    };
+                    container.appendChild(el);
+                });
+
+                document.getElementById('modal-bonus-quiz').classList.add('active');
+            },
+
+            initDOM() {
+                document.getElementById('btn-close-dc').onclick = () => {
+                    document.getElementById('modal-datacenter').classList.remove('active');
+                };
+
+                // Step 1 Submit
+                document.getElementById('btn-submit-step1').onclick = () => {
+                    if (this.step1Order.join('') === 'CAB') {
+                        this.score += 20;
+                        this.showToast("🎉 BENAR! Urutan: C (15 ha) < A (20 ha) < B (35 ha). (+20 Poin)");
+                        this.updateHUD();
+                        this.showDCStep(2);
+                    } else {
+                        this.showToast("❌ SALAH! Urutkan dari terkecil ke terbesar (15 < 20 < 35). Coba lagi!");
+                    }
+                };
+
+                // Step 2 Submit
+                document.getElementById('btn-submit-step2').onclick = () => {
+                    if (this.keypadVal === '70') {
+                        this.score += 20;
+                        this.showToast("🎉 BENAR! Total Luas = 20 + 35 + 15 = 70 ha. (+20 Poin)");
+                        this.updateHUD();
+                        this.showDCStep(3);
+                    } else {
+                        this.showToast("❌ SALAH! Hitung Total: 20 + 35 + 15.");
+                    }
+                };
+
+                // Step 3 Submit
+                document.getElementById('btn-submit-step3').onclick = () => {
+                    const vA = this.chartValues.A;
+                    const vB = this.chartValues.B;
+                    const vC = this.chartValues.C;
+
+                    if (Math.abs(vA - 20) <= 2 && Math.abs(vB - 35) <= 2 && Math.abs(vC - 15) <= 2) {
+                        this.score += 30;
+                        this.showToast("🎉 DIAGRAM BATANG BENAR! (+30 Poin)");
+                        this.updateHUD();
+                        this.showDCStep(4);
+                    } else {
+                        this.showToast("❌ SESUAIKAN BATANG: A=20 ha, B=35 ha, C=15 ha.");
+                    }
+                };
+
+                // Step 4 Start Field Mission
+                document.getElementById('btn-start-field-mission').onclick = () => {
+                    this.fieldMissionActive = true;
+                    document.getElementById('modal-datacenter').classList.remove('active');
+                    this.updateHUD();
+                    this.showToast(`🚒 STRATEGI DIPILIH! Jalani pemadaman di Titik ${this.selectedTargets.join(' & ')}!`);
+                };
+
+                // Bonus Quiz Submit
+                document.getElementById('btn-submit-bonus').onclick = () => {
+                    if (!this.selectedBonusAns) {
+                        this.showToast("Pilih salah satu jawaban persentase!");
+                        return;
+                    }
+
+                    const key = this.currentQuizTargetKey;
+                    const fp = this.firePointsData[key];
+
+                    if (this.selectedBonusAns === fp.pct) {
+                        this.score += 20;
+                        this.waterTank += fp.waterReq;
+                        this.updateHUD();
+
+                        document.getElementById('modal-bonus-quiz').classList.remove('active');
+                        this.showToast(`🎉 KUIS BENAR! Tangki Air (${fp.waterReq}L) Terisi! Menyemprot ${fp.name}...`);
+                        
+                        // Automatically Extinguish after quiz correct
+                        setTimeout(() => this.extinguishFireAt(key), 500);
+                    } else {
+                        this.showToast(`❌ SALAH! Rumus Persentase: (${fp.area} ÷ 70) × 100%. Coba lagi!`);
+                    }
+                };
+
+                document.getElementById('btn-restart-final').onclick = () => {
+                    location.reload();
+                };
+            }
+        };
+
+        window.addEventListener('load', () => app.init());
+    </script>
+</body>
+</html>
